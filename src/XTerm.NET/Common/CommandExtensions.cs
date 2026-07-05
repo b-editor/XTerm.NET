@@ -49,9 +49,33 @@ public static class CsiCommandExtensions
     /// <returns>The corresponding CsiCommand enum value, or Unknown if not recognized</returns>
     public static CsiCommand ToCsiCommand(this string identifier)
     {
-        // Handle DEC private mode sequences (e.g., "?h", "?l", ">c")
-        var cleaned = identifier.TrimStart('?', '>');
-        return _commandMap.GetValueOrDefault(cleaned, CsiCommand.Unknown);
+        if (identifier.Length == 0)
+            return CsiCommand.Unknown;
+
+        // Prefixed sequences are distinct commands, not shorthand for the plain
+        // ones: CSI > Ps m is modifyOtherKeys (not SGR), CSI > Ps u / CSI < u /
+        // CSI ? u belong to the kitty keyboard protocol (not cursor restore).
+        // Route only the prefixed forms that are actually implemented.
+        switch (identifier[0])
+        {
+            case '?':
+                return identifier switch
+                {
+                    "?h" => CsiCommand.SetMode,
+                    "?l" => CsiCommand.ResetMode,
+                    "?J" => CsiCommand.EraseInDisplay,
+                    "?K" => CsiCommand.EraseInLine,
+                    "?n" => CsiCommand.DeviceStatusReport,
+                    _ => CsiCommand.Unknown,
+                };
+            case '>':
+                return identifier == ">c" ? CsiCommand.DeviceAttributes : CsiCommand.Unknown;
+            case '<':
+            case '=':
+                return CsiCommand.Unknown;
+        }
+
+        return _commandMap.GetValueOrDefault(identifier, CsiCommand.Unknown);
     }
     
     /// <summary>
