@@ -19,6 +19,25 @@ public class KeyboardInputGenerator
     /// </summary>
     public string GenerateKeySequence(Key key, KeyModifiers modifiers = KeyModifiers.None)
     {
+        // Kitty keyboard protocol / xterm modifyOtherKeys: when active, a modified text-like key
+        // (Enter/Tab/Backspace/Escape) is reported as a disambiguated escape code instead of its
+        // legacy byte, so apps can tell e.g. Shift+Enter from Enter. Functional keys (arrows, F-keys)
+        // already carry modifiers in their legacy CSI form, so they are left to the switch below.
+        if (TryGetProtocolKeyCode(key, out int codePoint))
+        {
+            int kittyMod = GetKittyModifier(modifiers);
+            if ((_terminal.KittyFlags & 1) != 0 && kittyMod > 1)
+            {
+                return $"\u001b[{codePoint};{kittyMod}u";
+            }
+
+            int mok = GetModifierCode(modifiers);
+            if (_terminal.ModifyOtherKeysLevel >= 1 && mok > 1)
+            {
+                return $"\u001b[27;{mok};{codePoint}~";
+            }
+        }
+
         // Handle control characters for letter keys
         if ((modifiers & KeyModifiers.Control) != 0)
         {
@@ -269,5 +288,29 @@ public class KeyboardInputGenerator
         if ((modifiers & KeyModifiers.Alt) != 0) code += 2;
         if ((modifiers & KeyModifiers.Control) != 0) code += 4;
         return code;
+    }
+
+    // The kitty modifier encoding extends the xterm one with Super (Cmd/Win) as bit 8.
+    private int GetKittyModifier(KeyModifiers modifiers)
+    {
+        int code = GetModifierCode(modifiers);
+        if ((modifiers & KeyModifiers.Super) != 0) code += 8;
+        return code;
+    }
+
+    // Unicode key codes the kitty / modifyOtherKeys protocols use for the text-like keys whose
+    // modified form is otherwise indistinguishable from the unmodified one. Backspace is 127 (DEL),
+    // matching the legacy "\u007f" this generator already emits.
+    private static bool TryGetProtocolKeyCode(Key key, out int codePoint)
+    {
+        codePoint = key switch
+        {
+            Key.Enter => 13,
+            Key.Tab => 9,
+            Key.Backspace => 127,
+            Key.Escape => 27,
+            _ => 0
+        };
+        return codePoint != 0;
     }
 }

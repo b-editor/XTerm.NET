@@ -51,4 +51,5 @@ public enum KeyModifiers
     Shift = 1,
     Alt = 2,
     Control = 4,
+    Super = 8,
 }

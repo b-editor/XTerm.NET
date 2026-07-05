@@ -66,13 +66,21 @@ public static class CsiCommandExtensions
                     "?J" => CsiCommand.EraseInDisplay,
                     "?K" => CsiCommand.EraseInLine,
                     "?n" => CsiCommand.DeviceStatusReport,
+                    "?u" => CsiCommand.KittyQuery,
                     _ => CsiCommand.Unknown,
                 };
             case '>':
-                return identifier == ">c" ? CsiCommand.DeviceAttributes : CsiCommand.Unknown;
+                return identifier switch
+                {
+                    ">c" => CsiCommand.DeviceAttributes,
+                    ">u" => CsiCommand.KittyPush,
+                    ">m" => CsiCommand.ModifyOtherKeys,
+                    _ => CsiCommand.Unknown,
+                };
             case '<':
+                return identifier == "<u" ? CsiCommand.KittyPop : CsiCommand.Unknown;
             case '=':
-                return CsiCommand.Unknown;
+                return identifier == "=u" ? CsiCommand.KittySet : CsiCommand.Unknown;
         }
 
         return _commandMap.GetValueOrDefault(identifier, CsiCommand.Unknown);

@@ -163,7 +163,32 @@ public enum CsiCommand
     /// Select Cursor Style (DECSCUSR, CSI Ps SP q).
     /// </summary>
     SelectCursorStyle,
-    
+
+    /// <summary>
+    /// Kitty keyboard protocol: push flags onto the stack (CSI &gt; flags u).
+    /// </summary>
+    KittyPush,
+
+    /// <summary>
+    /// Kitty keyboard protocol: pop flags off the stack (CSI &lt; number u).
+    /// </summary>
+    KittyPop,
+
+    /// <summary>
+    /// Kitty keyboard protocol: set the current flags (CSI = flags ; mode u).
+    /// </summary>
+    KittySet,
+
+    /// <summary>
+    /// Kitty keyboard protocol: query the current flags (CSI ? u).
+    /// </summary>
+    KittyQuery,
+
+    /// <summary>
+    /// xterm modifyOtherKeys resource (CSI &gt; 4 ; Pv m).
+    /// </summary>
+    ModifyOtherKeys,
+
     /// <summary>
     /// Unknown or unsupported command.
     /// </summary>

@@ -61,7 +61,23 @@ public class Terminal
     /// Mode 1039 (altSendsEscape).
     /// </summary>
     public bool AltSendsEscape { get; set; }
-    
+
+    /// <summary>
+    /// Kitty keyboard protocol progressive-enhancement flag stack. The current flags are the top of
+    /// the stack (0 when empty). Bit 1 = disambiguate escape codes.
+    /// </summary>
+    public Stack<int> KittyKeyboardStack { get; } = new();
+
+    /// <summary>
+    /// The active Kitty keyboard flags (top of <see cref="KittyKeyboardStack"/>, or 0 when empty).
+    /// </summary>
+    public int KittyFlags => KittyKeyboardStack.Count > 0 ? KittyKeyboardStack.Peek() : 0;
+
+    /// <summary>
+    /// xterm modifyOtherKeys level (0 = off, 1, or 2), set via CSI &gt; 4 ; Pv m.
+    /// </summary>
+    public int ModifyOtherKeysLevel { get; set; }
+
     public string Title { get; set; }
     public string? CurrentDirectory { get; set; }
     public string? CurrentHyperlink { get; set; }
@@ -316,6 +332,8 @@ public class Terminal
         MetaSendsEscape = false;  // Default is disabled
         AltSendsEscape = false;
         Win32InputMode = false;
+        KittyKeyboardStack.Clear();
+        ModifyOtherKeysLevel = 0;
 
         // Reset cursor
         _buffer.SetCursor(0, 0);

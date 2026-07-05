@@ -459,11 +459,80 @@ public class InputHandler
                 ResetCSIModeParameters(parameters, isPrivate: isPrivate);
                 break;
 
+            case CsiCommand.KittyPush:
+                KittyPush(parameters);
+                break;
+
+            case CsiCommand.KittyPop:
+                KittyPop(parameters);
+                break;
+
+            case CsiCommand.KittySet:
+                KittySet(parameters);
+                break;
+
+            case CsiCommand.KittyQuery:
+                _terminal.RaiseDataReceived($"\u001b[?{_terminal.KittyFlags}u");
+                break;
+
+            case CsiCommand.ModifyOtherKeys:
+                // CSI > 4 ; Pv m — only Pp == 4 is modifyOtherKeys; Pv omitted resets to 0.
+                if (parameters.GetParam(0, 0) == 4)
+                {
+                    _terminal.ModifyOtherKeysLevel = parameters.GetParam(1, 0);
+                }
+                break;
+
             case CsiCommand.Unknown:
                 // Log unknown sequence for debugging
                 System.Diagnostics.Debug.WriteLine($"Unknown CSI sequence: {identifier}");
                 break;
         }
+    }
+
+    // Kitty keyboard protocol stack depth cap (matches the kitty reference implementation).
+    private const int KittyKeyboardStackLimit = 16;
+
+    private void KittyPush(Params parameters)
+    {
+        // CSI > flags u — push a new flags entry; ignore once the stack is full.
+        if (_terminal.KittyKeyboardStack.Count < KittyKeyboardStackLimit)
+        {
+            _terminal.KittyKeyboardStack.Push(parameters.GetParam(0, 0));
+        }
+    }
+
+    private void KittyPop(Params parameters)
+    {
+        // CSI < number u — pop 'number' entries (default 1), guarding an empty stack. The parser
+        // seeds an omitted parameter as 0, so clamp to at least 1 like the cursor-motion handlers.
+        int count = Math.Max(parameters.GetParam(0, 1), 1);
+        for (int i = 0; i < count && _terminal.KittyKeyboardStack.Count > 0; i++)
+        {
+            _terminal.KittyKeyboardStack.Pop();
+        }
+    }
+
+    private void KittySet(Params parameters)
+    {
+        // CSI = flags ; mode u — mode 1=set, 2=set bits, 3=clear bits, against the current flags.
+        int flags = parameters.GetParam(0, 0);
+        int mode = parameters.GetParam(1, 1);
+        int current = _terminal.KittyFlags;
+        int next = mode switch
+        {
+            1 => flags,
+            2 => current | flags,
+            3 => current & ~flags,
+            _ => current,
+        };
+
+        if (_terminal.KittyKeyboardStack.Count > 0)
+        {
+            _terminal.KittyKeyboardStack.Pop();
+        }
+
+        _terminal.KittyKeyboardStack.Push(next);
     }
 
     /// <summary>
