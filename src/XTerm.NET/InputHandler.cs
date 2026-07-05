@@ -854,11 +854,22 @@ public class InputHandler
         _buffer.SetCursor(col, row);
     }
 
+    /// <summary>
+    /// Attribute used to fill erased cells: background (BCE) only, per xterm.
+    /// Text attributes such as underline or bold must not bleed into blanks.
+    /// </summary>
+    private AttributeData EraseAttr()
+    {
+        var attr = AttributeData.Default;
+        attr.Bg = _curAttr.Bg;
+        return attr;
+    }
+
     private void EraseInDisplay(Params parameters)
     {
         var mode = parameters.GetParam(0, 0);
         var emptyCell = BufferCell.Space;
-        emptyCell.Attributes = _curAttr;
+        emptyCell.Attributes = EraseAttr();
 
         switch (mode)
         {
@@ -894,7 +905,7 @@ public class InputHandler
             return;
 
         var emptyCell = BufferCell.Space;
-        emptyCell.Attributes = _curAttr;
+        emptyCell.Attributes = EraseAttr();
 
         switch (mode)
         {
@@ -921,7 +932,7 @@ public class InputHandler
         {
             _buffer.Lines.Splice(_buffer.YBase + _buffer.ScrollBottom, 1);
             _buffer.Lines.Splice(_buffer.Y + _buffer.YBase, 0,
-                _buffer.GetBlankLine(_curAttr));
+                _buffer.GetBlankLine(EraseAttr()));
         }
     }
 
@@ -936,7 +947,7 @@ public class InputHandler
         {
             _buffer.Lines.Splice(_buffer.Y + _buffer.YBase, 1);
             _buffer.Lines.Splice(_buffer.YBase + _buffer.ScrollBottom, 0,
-                _buffer.GetBlankLine(_curAttr));
+                _buffer.GetBlankLine(EraseAttr()));
         }
     }
 
@@ -953,7 +964,7 @@ public class InputHandler
 
         // Blank the inserted cells at cursor position
         var emptyCell = BufferCell.Space;
-        emptyCell.Attributes = _curAttr;
+        emptyCell.Attributes = EraseAttr();
         line.Fill(emptyCell, _buffer.X, Math.Min(_buffer.X + count, _terminal.Cols));
     }
 
@@ -973,7 +984,7 @@ public class InputHandler
 
         // Fill vacated cells at right edge with current attributes (BCE)
         var emptyCell = BufferCell.Space;
-        emptyCell.Attributes = _curAttr;
+        emptyCell.Attributes = EraseAttr();
         line.Fill(emptyCell, _terminal.Cols - count, _terminal.Cols);
     }
 
@@ -983,7 +994,7 @@ public class InputHandler
         var line = _buffer.Lines[_buffer.Y + _buffer.YBase];
 
         var emptyCell = BufferCell.Space;
-        emptyCell.Attributes = _curAttr;
+        emptyCell.Attributes = EraseAttr();
 
         line?.Fill(emptyCell, _buffer.X, Math.Min(_buffer.X + count, _terminal.Cols));
     }
