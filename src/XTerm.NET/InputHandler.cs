@@ -495,29 +495,40 @@ public class InputHandler
 
     private void KittyPush(Params parameters)
     {
-        // CSI > flags u — push a new flags entry; ignore once the stack is full.
-        if (_terminal.KittyKeyboardStack.Count < KittyKeyboardStackLimit)
+        // CSI > flags u — push a new flags entry, evicting the oldest when the stack is full.
+        var stack = _terminal.KittyKeyboardStack;
+        if (stack.Count >= KittyKeyboardStackLimit)
         {
-            _terminal.KittyKeyboardStack.Push(parameters.GetParam(0, 0));
+            stack.RemoveAt(0);
         }
+
+        stack.Add(parameters.GetParam(0, 0));
     }
 
     private void KittyPop(Params parameters)
     {
         // CSI < number u — pop 'number' entries (default 1), guarding an empty stack. The parser
         // seeds an omitted parameter as 0, so clamp to at least 1 like the cursor-motion handlers.
+        var stack = _terminal.KittyKeyboardStack;
         int count = Math.Max(parameters.GetParam(0, 1), 1);
-        for (int i = 0; i < count && _terminal.KittyKeyboardStack.Count > 0; i++)
+        for (int i = 0; i < count && stack.Count > 0; i++)
         {
-            _terminal.KittyKeyboardStack.Pop();
+            stack.RemoveAt(stack.Count - 1);
         }
     }
 
     private void KittySet(Params parameters)
     {
         // CSI = flags ; mode u — mode 1=set, 2=set bits, 3=clear bits, against the current flags.
+        // The parser seeds an omitted mode as 0, so treat that as the default 1 (set).
+        var stack = _terminal.KittyKeyboardStack;
         int flags = parameters.GetParam(0, 0);
         int mode = parameters.GetParam(1, 1);
+        if (mode == 0)
+        {
+            mode = 1;
+        }
+
         int current = _terminal.KittyFlags;
         int next = mode switch
         {
@@ -527,12 +538,14 @@ public class InputHandler
             _ => current,
         };
 
-        if (_terminal.KittyKeyboardStack.Count > 0)
+        if (stack.Count > 0)
         {
-            _terminal.KittyKeyboardStack.Pop();
+            stack[^1] = next;
         }
-
-        _terminal.KittyKeyboardStack.Push(next);
+        else
+        {
+            stack.Add(next);
+        }
     }
 
     /// <summary>

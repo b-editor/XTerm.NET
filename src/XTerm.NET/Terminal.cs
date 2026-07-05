@@ -63,15 +63,16 @@ public class Terminal
     public bool AltSendsEscape { get; set; }
 
     /// <summary>
-    /// Kitty keyboard protocol progressive-enhancement flag stack. The current flags are the top of
-    /// the stack (0 when empty). Bit 1 = disambiguate escape codes.
+    /// Kitty keyboard protocol progressive-enhancement flag stack. The current flags are the last
+    /// element (0 when empty). A List (rather than Stack) so the oldest entry can be evicted when the
+    /// stack overflows, as the protocol requires. Bit 1 = disambiguate escape codes.
     /// </summary>
-    public Stack<int> KittyKeyboardStack { get; } = new();
+    public List<int> KittyKeyboardStack { get; } = new();
 
     /// <summary>
     /// The active Kitty keyboard flags (top of <see cref="KittyKeyboardStack"/>, or 0 when empty).
     /// </summary>
-    public int KittyFlags => KittyKeyboardStack.Count > 0 ? KittyKeyboardStack.Peek() : 0;
+    public int KittyFlags => KittyKeyboardStack.Count > 0 ? KittyKeyboardStack[^1] : 0;
 
     /// <summary>
     /// xterm modifyOtherKeys level (0 = off, 1, or 2), set via CSI &gt; 4 ; Pv m.

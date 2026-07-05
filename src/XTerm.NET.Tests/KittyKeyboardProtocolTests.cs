@@ -126,4 +126,30 @@ public class KittyKeyboardProtocolTests
         Assert.Equal("\u001b[9;2u", terminal.GenerateKeyInput(Key.Tab, KeyModifiers.Shift));
         Assert.Equal("\u001b[127;5u", terminal.GenerateKeyInput(Key.Backspace, KeyModifiers.Control));
     }
+
+    [Fact]
+    public void KittyPush_EvictsOldest_WhenStackIsFull()
+    {
+        var terminal = CreateTerminal();
+
+        for (int i = 0; i < 16; i++)
+        {
+            terminal.Write("\u001b[>1u");
+        }
+
+        // The 17th push must still take effect (oldest evicted), not be ignored.
+        terminal.Write("\u001b[>2u");
+
+        Assert.Equal(2, terminal.KittyFlags);
+    }
+
+    [Fact]
+    public void KittySet_DefaultsModeToSet_WhenModeFieldIsEmpty()
+    {
+        var terminal = CreateTerminal();
+
+        terminal.Write("\u001b[=5;u");
+
+        Assert.Equal(5, terminal.KittyFlags);
+    }
 }
