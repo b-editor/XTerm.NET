@@ -265,6 +265,14 @@ public class EscapeSequenceParser
         // Entry actions
         switch (newState)
         {
+            case ParserState.Escape:
+                // VT500 state machine: the escape state's entry action is "clear".
+                // Without this, collect bytes leak across sequences (e.g. ESC(B ESC)0
+                // designates G0 instead of G1 because '(' is still in the buffer).
+                _params.Reset();
+                _collect.Clear();
+                break;
+
             case ParserState.CsiEntry:
             case ParserState.DcsEntry:
                 _params.Reset();
